@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>辣鸡游戏</title>
+</head>
+<style>
+  body {
+    font-family: 'Microsoft YaHei', 'Courier New', Courier, monospace;
+    background-color: #201f21;
+  }
+  #game {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .title {
+    text-align: center;
+    font-size: 18px;
+    color:#00bfff;
+    font-style: bold;
+    line-height: 36px;
+  }
+  #russian {
+    border: 2px solid #201f21;
+  }
+</style>
+<body>
+  <div id="game">
+    <p class="title">↓↓ &nbsp;真实辣鸡游戏&nbsp; ↓↓</p>
+    <div class="gamebody">
+      <canvas id="russian"></canvas>
+    </div>
+  </div>
+</body>
+<script>
+  const CVS_ROWS = 14,
+        CVS_COLS = 10,
+        CELL_SIZE = 26,
+        SCORE_STEP = 100,
+        SCORE_BONUS = 500,
+        BLOCK_COLORS = ["#ffffff", "#2ca361" , "#ffa500" , "#4682b4", "#4b0082" , "#1e90ff" , "#8b0000" , "#deb887"],
+        BLOCKS = [
+          [   {x:CVS_COLS/2-1, y:0, color:1},      //1. Z形方块组合
+              {x:CVS_COLS/2, y:0, color:1},
+              {x:CVS_COLS/2, y:1, color:1},
+              {x:CVS_COLS/2+1, y:1, color:1}     
+          ],
+          [   {x:CVS_COLS/2+1, y:0, color:2},      //2. 反Z形方块组合
+              {x:CVS_COLS/2, y:0, color:2},
+              {x:CVS_COLS/2, y:1, color:2},
+              {x:CVS_COLS/2-1, y:1, color:2}
+          ],
+          [   {x:CVS_COLS/2-1, y:0, color:3},      //3. 田形方块组合
+              {x:CVS_COLS/2, y:0, color:3},
+              {x:CVS_COLS/2-1, y:1, color:3},
+              {x:CVS_COLS/2, y:1, color:3}
+          ],
+          [   {x:CVS_COLS/2, y:0, color:4},      //4. L形方块组合
+              {x:CVS_COLS/2, y:1, color:4},
+              {x:CVS_COLS/2, y:2, color:4},
+              {x:CVS_COLS/2+1, y:2, color:4}
+          ],  
+          [   {x:CVS_COLS/2, y:0, color:5},      //5. J形方块组合
+              {x:CVS_COLS/2, y:1, color:5},
+              {x:CVS_COLS/2, y:2, color:5},
+              {x:CVS_COLS/2-1, y:2, color:5}
+          ],
+          [   {x:CVS_COLS/2, y:0, color:6},      //6. 竖形方块组合
+              {x:CVS_COLS/2, y:1, color:6},
+              {x:CVS_COLS/2, y:2, color:6},
+              {x:CVS_COLS/2, y:3, color:6}
+          ],  
+          [   {x:CVS_COLS/2, y:0, color:7},      //7. 凸形方块组合
+              {x:CVS_COLS/2-1, y:1, color:7},
+              {x:CVS_COLS/2, y:1, color:7},
+              {x:CVS_COLS/2+1, y:1, color:7}
+          ]
+        ],
+        NO_BLOCK = 0,
+        BACKGROUND_COLOR = '#ffffff';
+  let cvs, cvsctx, gameTimer;
+  let fallingBlock = new Array(4);
+  let currentScore = 0;
+  let currentLevel = 1;
+  let is_playing = false;
+  let blocks_status = [];
+  let game_speed = {
+    get getter() {
+      return 4000 / currentLevel;
+    }
+  };
+  let speedUpScore = {
+    get getter() {
+      return currentLevel * currentLevel * 500;
+    }
+  }
+
+  // create game environment(draw canvas)
+  function createCanvas(rows, cols, cellSize) {
+    // create canvas
+    cvs = document.getElementById('russian');
+    cvs.width = cols * cellSize;
+    cvs.height = rows * cellSize;
+    cvsctx = cvs.getContext('2d');
+    cvsctx.beginPath();
+    // draw horizontal lines
+    for(let i = 1; i < rows; i++) {
+      cvsctx.moveTo(0, i * cellSize);
+      cvsctx.lineTo(cols * cellSize, i * cellSize);
+    }
+    // draw vertical lines
+    for(let i = 1; i < cols; i++) {
+      cvsctx.moveTo(i * cellSize, 0);
+      cvsctx.lineTo(i * cellSize, rows * cellSize);
+    }
+    cvsctx.closePath();
+    cvsctx.strokeStyle = '#666666';
+    cvsctx.lineWidth = 1;
+    cvsctx.stroke();
+    cvsctx.strokeStyle = '#000000';
+    cvsctx.strokeRect(0, 0, cols * cellSize, rows * cellSize);
+    document.getElementById('game').appendChild(cvs);
+  }
+  function createFallingBlock() {
+    let r = Math.floor(Math.random() * BLOCKS.length);
+    fallingBlock = [
+      {x: BLOCKS[r][0].x, y: BLOCKS[r][0].y, color: BLOCKS[r][0].color},
+      {x: BLOCKS[r][1].x, y: BLOCKS[r][1].y, color: BLOCKS[r][1].color},
+      {x: BLOCKS[r][2].x, y: BLOCKS[r][2].y, color: BLOCKS[r][2].color},
+      {x: BLOCKS[r][3].x, y: BLOCKS[r][3].y, color: BLOCKS[r][3].color},
+    ];
+    for(let i = 0; i < fallingBlock.length; i++) {
+      let blockCell = fallingBlock[i];
+      cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
+      cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    }
+  }
+  function initBlocksStatus() {
+    for(let i = 0; i < CVS_ROWS; i++) {
+      blocks_status[i] = [];
+      for(let j = 0; j < CVS_COLS; j++) {
+        blocks_status[i][j] = NO_BLOCK;
+      }
+    }
+    drawBlock();
+  }
+  function drawBlock() {
+    for(let i = 0; i < CVS_ROWS; i++) {
+      for(let j = 0; j < CVS_COLS; j++) {
+        if(blocks_status[i][j] == NO_BLOCK) {
+          cvsctx.fillStyle = '#ffffff';
+          cvsctx.fillRect(j * CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+        } else {
+          cvsctx.fillStyle = BLOCK_COLORS[blocks_status[i][j]];
+          cvsctx.fillRect(j * CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+        }
+      }
+    }
+  }
+  function isAnyLineFull() {
+    for(let i = 0; i < CVS_ROWS; i++) {
+      let isThisLineFull = true;
+      for(let j = 0; j < CVS_COLS; j++) {
+        if(blocks_status[i][j] === NO_BLOCK) {
+          isThisLineFull = false;
+          break;
+        }
+      }
+      if(isThisLineFull) {
+        currentScore += 100;
+        localStorage.setItem('BLOCKGAME_CURRENTSCORE', currentScore);
+        if(currentScore >= speedUpScore) {
+          currentLevel += 1;
+          localStorage.setItem('BLOCKGAME_currentLevel', currentScore);
+          
+          // update game speed
+          clearInterval(gameTimer);
+          setInterval(movedown, 500 / currentLevel);
+        }
+
+        for(let k = i; k > 0; k--) {
+          for(let l = 0; l < CVS_COLS; l++) {
+            blocks_status[k][l] = blocks_status[k-1][l];
+          }
+        }
+        drawBlock();
+      }
+
+    }
+  }
+  function movedown() {
+    let canDown = true;
+    for(let i = 0; i < fallingBlock.length; i++) {
+      // if current block is attaching the bottom border or someone block is under it,
+      // it shall not continue move down
+      if(fallingBlock[i].y >= CVS_ROWS - 1) {
+        canDown = false; break;
+      }
+      if(blocks_status[fallingBlock[i].y + 1][fallingBlock[i].x] !== NO_BLOCK) {
+        canDown = false; break;
+      }
+    }
+    if(canDown) {
+      // draw every OLD block cell to background color
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = '#ffffff';
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+      // every block cell move down 1 block
+      for(let i = 0; i < fallingBlock.length; i++) {
+        fallingBlock[i].y++;
+      }
+      // now draw every block to their new position
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+    } else {
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        // when a block cell is attaching the top border, then LOSE.
+        if(blockCell.y < 2) {
+          confirm('You lose');
+          is_playing = false;
+          clearInterval(gameTimer);
+          return;
+        }
+        blocks_status[blockCell.y][blockCell.x] = blockCell.color;
+      }
+      isAnyLineFull();
+      localStorage.setItem('GAME_BLOCKS_STATUS', JSON.stringify(blocks_status));
+      createFallingBlock();
+    }
+  }
+  function moveLeft() {
+    let canMove = true;
+    for(let i = 0; i < fallingBlock.length; i++) {
+      let blockCell = fallingBlock[i];
+      if(fallingBlock.x < 1) {
+        canMove = false; break;
+      }
+      if(blocks_status[blockCell.y][blockCell.x - 1] !== NO_BLOCK) {
+        canMove = false;
+        break;
+      }
+    }
+    if(canMove) {
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = '#ffffff';
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+      for(let i = 0; i < fallingBlock.length; i++) {
+        fallingBlock[i].x--;
+      }
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+    }
+  }
+  function moveRight() {
+    let canMove = true;
+    for(let i = 0; i < fallingBlock.length; i++) {
+      let blockCell = fallingBlock[i];
+      if(fallingBlock.x < CVS_COLS - 1) {
+        canMove = false; break;
+      }
+      if(blocks_status[blockCell.y][blockCell.x + 1] !== NO_BLOCK) {
+        canMove = false;
+        break;
+      }
+    }
+    if(canMove) {
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = '#ffffff';
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+      for(let i = 0; i < fallingBlock.length; i++) {
+        fallingBlock[i].x++;
+      }
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+    }
+  }
+  function rotate() {
+    let canRotate = true;
+    for(let i = 0; i < fallingBlock.length; i++) {
+      // save the origin coordinate
+      let oriX = fallingBlock[i].x;
+      let oriY = fallingBlock[i].y;
+      // set the 3rd block as the center of rotation, and it will not rotate.
+      if(i !== 2) {
+        // now the target coordinate is (fallingBlock[2].x + oriY - fallingBlock.y, fallingBlock[2].y + fallingBlock[2].x - oriX)
+        let targetX = fallingBlock[2].x + oriY - fallingBlock[2].y,
+            targetY = fallingBlock[2].y + fallingBlock[2].x - oriX;
+        if(blocks_status[targetY][targetX + 1] !== NO_BLOCK) {
+          canRotate = false;
+          break;
+        }
+        // when target coordinate will move out the left border
+        if(targetX < 0 || blocks_status[targetY - 1][targetX] !== NO_BLOCK) {
+          canRotate = false;
+          break;
+        }
+        // when target coordinate will move out the right border
+        if(targetX >= CVS_COLS - 1 || blocks_status[targetY - 1][targetX] !== NO_BLOCK) {
+          canRotate = false;
+          break;
+        }
+      }
+    }
+    if(canRotate) {
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = '#ffffff';
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let oriX = fallingBlock[i].x;
+        let oriY = fallingBlock[i].y;
+        if(i !== 2) {
+          fallingBlock[i].x = fallingBlock[2].x + oriY - fallingBlock[2].y;
+          fallingBlock[i].y = fallingBlock[2].y + fallingBlock[2].x - oriX;
+        }
+      }
+      for(let i = 0; i < fallingBlock.length; i++) {
+        let blockCell = fallingBlock[i];
+        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
+        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      }
+    }
+  }
+  function pause() {
+    console.log(1);
+    if(is_playing) {
+      clearInterval(gameTimer);    
+      is_playing = false;
+    } else {
+      is_playing = true;      
+    }
+  }
+  function setKeyBind() {
+    let top, left, down, right, space;
+    space = 32;
+    top = 73, left = 74, down = 75, right = 76; // I J K L
+
+    window.onkeydown = function(e) {
+      switch(e.keyCode) {
+        case top: rotate(); break;
+        case left: moveLeft(); break;
+        case down: movedown(); break;
+        case right: moveRight(); break;
+        case space: pause(); break;
+      }
+    }
+  }
+  function init() {
+    setKeyBind();
+    createCanvas(CVS_ROWS, CVS_COLS, CELL_SIZE);
+    initBlocksStatus();
+    createFallingBlock();
+    gameTimer = setInterval(movedown, 4000 / currentLevel);
+  }
+  window.onload = init();
+</script>
+</html>
