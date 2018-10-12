@@ -5,6 +5,12 @@
   <title>辣鸡游戏</title>
 </head>
 <style>
+  * {
+    box-sizing: border-box;
+  }
+  p {
+    margin: 0;
+  }
   body {
     font-family: 'Microsoft YaHei', 'Courier New', Courier, monospace;
     background-color: #201f21;
@@ -14,6 +20,7 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
+    white-space: nowrap;
   }
   .title {
     text-align: center;
@@ -22,22 +29,39 @@
     font-style: bold;
     line-height: 36px;
   }
-  #russian {
-    border: 2px solid #201f21;
+  #board {}
+  .gamebody {
+    display: inline-block;
+    height: 386px;
+  }
+  .gameinfo {
+    display: inline-block;
+    margin-left: 20px;
+    width: 136px;
+  }
+  .gameinfo-text {
+    margin-top: 12px;
+    line-height: 18px;
+    font-size: 18px;
+    color: #00bfff;
   }
 </style>
 <body>
   <div id="game">
-    <p class="title">↓↓ &nbsp;真实辣鸡游戏&nbsp; ↓↓</p>
     <div class="gamebody">
-      <canvas id="russian"></canvas>
+      <p class="title">↓↓ &nbsp;真实辣鸡游戏&nbsp; ↓↓</p>
+      <canvas id="board"></canvas>
+    </div>
+    <div class="gameinfo">
+      <p class="gameinfo-text" id="score"></p>
+      <p class="gameinfo-text" id="level"></p>
     </div>
   </div>
 </body>
 <script>
   const CVS_ROWS = 14,
         CVS_COLS = 10,
-        CELL_SIZE = 26,
+        CELL_SIZE = 25,
         SCORE_STEP = 100,
         SCORE_BONUS = 500,
         BLOCK_COLORS = ["#ffffff", "#2ca361" , "#ffa500" , "#4682b4", "#4b0082" , "#1e90ff" , "#8b0000" , "#deb887"],
@@ -91,16 +115,11 @@
       return 4000 / currentLevel;
     }
   };
-  let speedUpScore = {
-    get getter() {
-      return currentLevel * currentLevel * 500;
-    }
-  }
+  let speedUpScore = null;
 
   // create game environment(draw canvas)
-  function createCanvas(rows, cols, cellSize) {
-    // create canvas
-    cvs = document.getElementById('russian');
+  function createBoard(rows, cols, cellSize) {
+    cvs = document.getElementById('board');
     cvs.width = cols * cellSize;
     cvs.height = rows * cellSize;
     cvsctx = cvs.getContext('2d');
@@ -119,9 +138,7 @@
     cvsctx.strokeStyle = '#666666';
     cvsctx.lineWidth = 1;
     cvsctx.stroke();
-    cvsctx.strokeStyle = '#000000';
-    cvsctx.strokeRect(0, 0, cols * cellSize, rows * cellSize);
-    document.getElementById('game').appendChild(cvs);
+    document.getElementsByClassName('gamebody')[0].appendChild(cvs);
   }
   function createFallingBlock() {
     let r = Math.floor(Math.random() * BLOCKS.length);
@@ -170,15 +187,14 @@
       }
       if(isThisLineFull) {
         currentScore += 100;
-        localStorage.setItem('BLOCKGAME_CURRENTSCORE', currentScore);
         if(currentScore >= speedUpScore) {
           currentLevel += 1;
-          localStorage.setItem('BLOCKGAME_currentLevel', currentScore);
-          
+          speedUpScore = currentLevel * currentLevel * 500;
           // update game speed
           clearInterval(gameTimer);
-          setInterval(movedown, 500 / currentLevel);
+          setInterval(movedown, 4000 / currentLevel);
         }
+        updateGUI();
 
         for(let k = i; k > 0; k--) {
           for(let l = 0; l < CVS_COLS; l++) {
@@ -364,13 +380,23 @@
       }
     }
   }
+  function updateGUI() {
+    document.getElementById('score').innerText = `SCORE: ${currentScore}`;
+    document.getElementById('level').innerText = `LEVEL: ${currentLevel}`;
+  }
   function init() {
-    setKeyBind();
-    createCanvas(CVS_ROWS, CVS_COLS, CELL_SIZE);
+    speedUpScore = 200;
     initBlocksStatus();
+  }
+  function start() {
+    createBoard(CVS_ROWS, CVS_COLS, CELL_SIZE);
+    updateGUI();
+    
+    setKeyBind();
+    init();
     createFallingBlock();
     gameTimer = setInterval(movedown, 4000 / currentLevel);
   }
-  window.onload = init();
+  window.onload = start();
 </script>
 </html>
