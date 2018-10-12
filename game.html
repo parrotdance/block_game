@@ -57,18 +57,20 @@
     font-size: 32px;
     color:#00bfff;
   }
-  .menubutton {
+  .menubutton {}
+  .button {
     margin: 12px auto;
     width: 8em;
     cursor: pointer;
     border: 1px solid #00bfff;
+    border-radius: 4px;
     text-align: center;
     line-height: 32px;
     font-size: 16px;
     color:#00bfff;
     transition: all .3s ease;
   }
-  .menubutton:hover {
+  .button:hover {
     box-shadow: 0 0 40px #999999;
   }
   #info {
@@ -78,7 +80,6 @@
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.5, 0.5) rotate(-180deg);
     transition: all .4s ease;
-    display: none;
     width: 400px;
     height: 400px;
     flex-direction: column;
@@ -95,7 +96,60 @@
     font-size: 18px;
     color:#00bfff;
     font-style: bold;
-    line-height: 36px;
+    line-height: 62px;
+  }
+  .infocontent-key {
+    display: inline-block;
+    padding: 0 12px;
+    min-width: 48px;
+    height: 48px;
+    border: 1px solid #00bfff;
+    border-radius: 4px;
+    font-size: 24px;
+    line-height: 48px;
+  }
+  .infoconfirm {
+    margin-top: 24px;
+  }
+  #result {
+    opacity: 0;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    transform: translate(-50%, -50%) scale(0.5, 0.5);
+    transition: all .4s ease;
+  }
+  #result.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1, 1);
+  }
+  .resultmask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #201f21;
+    opacity: 0.9;
+    z-index: -1;
+  }
+  .resultbody {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .resulttitle, .resultcontent {
+    text-align: center;
+    font-size: 18px;
+    color:#00bfff;
+    font-style: bold;
+    line-height: 62px;
+  }
+  .resultconfirm {
+    margin-top: 24px;
   }
 </style>
 <body>
@@ -111,12 +165,29 @@
   </div>
   <div id="menu">
     <p class="menutitle">假的俄罗斯方块</p>
-    <div class="menubutton" onclick="showInfoPanel()">设置</div>
-    <div class="menubutton" onclick="start()">开始</div>
+    <div class="menubutton button" onclick="toggleInfoPanel()">操作</div>
+    <div class="menubutton button" onclick="start()">开始</div>
   </div>
   <div id="info">
-    <p class="infotitle">提示</p>
-    <p class="infocontent">别点了 这还没写</p>
+    <p class="infotitle">操作说明</p><br>
+    <p class="infocontent">
+      上: <span class="infocontent-key">I</span><br>
+      左: <span class="infocontent-key">J</span>  
+      下: <span class="infocontent-key">K</span>  
+      右: <span class="infocontent-key">L</span>  
+    </p>
+    <p class="infocontent">
+      暂停: <span class="infocontent-key">Space</span>
+    </p>
+    <div class="infoconfirm button" onclick="toggleInfoPanel()">确定</div>
+  </div>
+  <div id="result">
+    <div class="resultmask"></div>
+    <div class="resultbody">
+      <p class="resulttitle">提示</p>
+      <p class="resultcontent" id="resultContent"></p>
+      <div class="resultconfirm button" onclick="reset()">重新开始</div>
+    </div>
   </div>
 </body>
 <!-- UI logic-->
@@ -125,22 +196,47 @@
   let menu = document.getElementById('menu');
   let game = document.getElementById('game');
   let info = document.getElementById('info');
+  let result = document.getElementById('result');
+  let resultContent = document.getElementById('resultContent');
   window.onload = function() {
+    info.style.display = 'none';
+    result.style.display = 'none';
     setTimeout(() => {
       menu.classList.add('show');
-    }, 1000);
+    }, 800);
   }
-  function showInfoPanel() {
-    info.style.display = 'flex';
-    setTimeout(() => {
-      info.classList.add('show');
-    }, 200);
-    setTimeout(() => {
+  function toggleInfoPanel() {
+    if(info.style.display === 'none') {
+      info.style.display = 'flex';
+      setTimeout(() => {
+        info.classList.add('show');
+      }, 200);
+    } else {
       info.classList.remove('show');
       setTimeout(() => {
         info.style.display = 'none';
       }, 500);
-    }, 2000);
+    }
+  }
+  function toggleResultPanel(type) {
+    if(type) {
+      result.style.display = 'block';
+      setTimeout(() => {
+        result.classList.add('show');
+      }, 200);
+    } else {
+      result.classList.remove('show');
+      setTimeout(() => {
+        result.style.display = 'none';
+      }, 200);
+    }
+  }
+  function reset() {
+    toggleResultPanel(0);
+    setTimeout(() => {
+      menu.classList.add('show');
+      game.classList.remove('show');
+    }, 500);
   }
   function start() {
     menu.classList.remove('show');
@@ -332,9 +428,7 @@
         let blockCell = fallingBlock[i];
         // when a block cell is attaching the top border, then LOSE.
         if(blockCell.y < 2) {
-          confirm('You lose');
-          is_playing = false;
-          clearInterval(gameTimer);
+          gameOver();
           return;
         }
         blocks_status[blockCell.y][blockCell.x] = blockCell.color;
@@ -470,6 +564,12 @@
     init();
     createFallingBlock();
     updateLevel();
+  }
+  function gameOver() {
+    is_playing = false;
+    clearInterval(gameTimer);
+    resultContent.innerText = `大佬太强了, 竟然得了 ${currentScore} 分!`;
+    toggleResultPanel(1);
   }
 </script>
 </html>
