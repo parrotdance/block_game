@@ -148,10 +148,9 @@
       {x: BLOCKS[r][2].x, y: BLOCKS[r][2].y, color: BLOCKS[r][2].color},
       {x: BLOCKS[r][3].x, y: BLOCKS[r][3].y, color: BLOCKS[r][3].color},
     ];
-    for(let i = 0; i < fallingBlock.length; i++) {
-      let blockCell = fallingBlock[i];
-      cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
-      cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    for(let item of fallingBlock) {
+      cvsctx.fillStyle = BLOCK_COLORS[item.color];
+      cvsctx.fillRect(item.x * CELL_SIZE + 1, item.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
     }
   }
   function initBlocksStatus() {
@@ -161,20 +160,23 @@
         blocks_status[i][j] = NO_BLOCK;
       }
     }
-    drawBlock();
+    drawAllBlocks();
   }
-  function drawBlock() {
+  function drawAllBlocks() {
     for(let i = 0; i < CVS_ROWS; i++) {
       for(let j = 0; j < CVS_COLS; j++) {
         if(blocks_status[i][j] == NO_BLOCK) {
-          cvsctx.fillStyle = '#ffffff';
-          cvsctx.fillRect(j * CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+          // cvsctx.fillStyle = BLOCK_COLORS[0];
+          drawBlock(j, i, BLOCK_COLORS[0]);
         } else {
-          cvsctx.fillStyle = BLOCK_COLORS[blocks_status[i][j]];
-          cvsctx.fillRect(j * CELL_SIZE + 1, i * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+          drawBlock(j, i, blocks_status[i][j]);
         }
       }
     }
+  }
+  function drawBlock(x, y, color) {
+    cvsctx.fillStyle = color;
+    cvsctx.fillRect(x * CELL_SIZE + 1, y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
   }
   function isAnyLineFull() {
     for(let i = 0; i < CVS_ROWS; i++) {
@@ -191,19 +193,16 @@
           currentLevel += 1;
           speedUpScore = currentLevel * currentLevel * 500;
           // update game speed
-          clearInterval(gameTimer);
-          setInterval(movedown, 4000 / currentLevel);
+          updateLevel();
         }
         updateGUI();
-
         for(let k = i; k > 0; k--) {
           for(let l = 0; l < CVS_COLS; l++) {
             blocks_status[k][l] = blocks_status[k-1][l];
           }
         }
-        drawBlock();
+        drawAllBlocks();
       }
-
     }
   }
   function movedown() {
@@ -254,58 +253,40 @@
   }
   function moveLeft() {
     let canMove = true;
-    for(let i = 0; i < fallingBlock.length; i++) {
-      let blockCell = fallingBlock[i];
-      if(fallingBlock.x < 1) {
+    for(let item of fallingBlock) {
+      if(item.x < 1 || (blocks_status[item.y][item.x - 1] !== NO_BLOCK)) {
         canMove = false; break;
-      }
-      if(blocks_status[blockCell.y][blockCell.x - 1] !== NO_BLOCK) {
-        canMove = false;
-        break;
       }
     }
     if(canMove) {
-      for(let i = 0; i < fallingBlock.length; i++) {
-        let blockCell = fallingBlock[i];
-        cvsctx.fillStyle = '#ffffff';
-        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      fallingBlock.forEach( item => {
+        drawBlock(item.x, item.y, BLOCK_COLORS[0]);
+      })
+      for(let item of fallingBlock) {
+        item.x--;
       }
-      for(let i = 0; i < fallingBlock.length; i++) {
-        fallingBlock[i].x--;
-      }
-      for(let i = 0; i < fallingBlock.length; i++) {
-        let blockCell = fallingBlock[i];
-        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
-        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-      }
+      fallingBlock.forEach( item => {
+        drawBlock(item.x, item.y, BLOCK_COLORS[item.color]);
+      })
     }
   }
   function moveRight() {
     let canMove = true;
-    for(let i = 0; i < fallingBlock.length; i++) {
-      let blockCell = fallingBlock[i];
-      if(fallingBlock.x < CVS_COLS - 1) {
+    for(let item of fallingBlock) {
+      if(item.x > CVS_COLS - 1 || blocks_status[item.y][item.x + 1] !== NO_BLOCK) {
         canMove = false; break;
-      }
-      if(blocks_status[blockCell.y][blockCell.x + 1] !== NO_BLOCK) {
-        canMove = false;
-        break;
       }
     }
     if(canMove) {
-      for(let i = 0; i < fallingBlock.length; i++) {
-        let blockCell = fallingBlock[i];
-        cvsctx.fillStyle = '#ffffff';
-        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+      fallingBlock.forEach( item => {
+        drawBlock(item.x, item.y, BLOCK_COLORS[0]);
+      })
+      for(let item of fallingBlock) {
+        item.x++;
       }
-      for(let i = 0; i < fallingBlock.length; i++) {
-        fallingBlock[i].x++;
-      }
-      for(let i = 0; i < fallingBlock.length; i++) {
-        let blockCell = fallingBlock[i];
-        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
-        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-      }
+      fallingBlock.forEach( item => {
+        drawBlock(item.x, item.y, BLOCK_COLORS[item.color]);
+      })
     }
   }
   function rotate() {
@@ -336,33 +317,29 @@
       }
     }
     if(canRotate) {
+      fallingBlock.forEach( item => {
+        drawBlock(item.x, item.y, BLOCK_COLORS[0]);
+      })
+      let oriX, oriY;
       for(let i = 0; i < fallingBlock.length; i++) {
-        let blockCell = fallingBlock[i];
-        cvsctx.fillStyle = '#ffffff';
-        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-      }
-      for(let i = 0; i < fallingBlock.length; i++) {
-        let oriX = fallingBlock[i].x;
-        let oriY = fallingBlock[i].y;
+        oriX = fallingBlock[i].x;
+        oriY = fallingBlock[i].y;
         if(i !== 2) {
           fallingBlock[i].x = fallingBlock[2].x + oriY - fallingBlock[2].y;
           fallingBlock[i].y = fallingBlock[2].y + fallingBlock[2].x - oriX;
         }
       }
-      for(let i = 0; i < fallingBlock.length; i++) {
-        let blockCell = fallingBlock[i];
-        cvsctx.fillStyle = BLOCK_COLORS[blockCell.color];
-        cvsctx.fillRect(blockCell.x * CELL_SIZE + 1, blockCell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
-      }
+      fallingBlock.forEach( item => {
+        drawBlock(item.x, item.y, BLOCK_COLORS[item.color]);
+      })
     }
   }
   function pause() {
-    console.log(1);
     if(is_playing) {
-      clearInterval(gameTimer);    
+      clearInterval(gameTimer);
       is_playing = false;
     } else {
-      is_playing = true;      
+      updateLevel();
     }
   }
   function setKeyBind() {
@@ -384,6 +361,11 @@
     document.getElementById('score').innerText = `SCORE: ${currentScore}`;
     document.getElementById('level').innerText = `LEVEL: ${currentLevel}`;
   }
+  function updateLevel() {
+    if(gameTimer) clearInterval(gameTimer);
+    gameTimer = setInterval(movedown, 4000 / currentLevel);
+    is_playing = true;
+  }
   function init() {
     speedUpScore = 200;
     initBlocksStatus();
@@ -391,11 +373,10 @@
   function start() {
     createBoard(CVS_ROWS, CVS_COLS, CELL_SIZE);
     updateGUI();
-    
     setKeyBind();
     init();
     createFallingBlock();
-    gameTimer = setInterval(movedown, 4000 / currentLevel);
+    updateLevel();
   }
   window.onload = start();
 </script>
