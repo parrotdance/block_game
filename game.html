@@ -261,7 +261,7 @@
           // cvsctx.fillStyle = BLOCK_COLORS[0];
           drawBlock(j, i, BLOCK_COLORS[0]);
         } else {
-          drawBlock(j, i, blocks_status[i][j]);
+          drawBlock(j, i, BLOCK_COLORS[blocks_status[i][j]]);
         }
       }
     }
@@ -280,6 +280,7 @@
         }
       }
       if(isThisLineFull) {
+        console.log('full');
         currentScore += 100;
         if(currentScore >= speedUpScore) {
           currentLevel += 1;
